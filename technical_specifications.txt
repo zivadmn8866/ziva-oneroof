@@ -1,0 +1,306 @@
+## ziva technical specifications.txt
+
+Project: Ziva — Barber, Beauty Parlour & Salon Service (Client-side / Non-server)
+Prepared by: Ziva Devs (we’re a 20-year-old dev team 😉)
+Date: 2025-11-18
+
+## PURPOSE
+
+This single-file spec is a ready-to-paste summary for a GitHub repo README / technical spec focusing ONLY on the non-server side:
+
+* Customer app (web)
+* Partner app (barber/beauty pro web)
+* Admin web (UI only, read-only where backend required)
+* Mobile app (React Native)
+  No server implementation included here — only client architecture, data contracts, integrations, CI/CD and deployment guidance for static/front-end assets.
+
+## PROJECT OVERVIEW
+
+Platform: Multi-sided marketplace (Customers, Service Providers, Admin dashboard)
+Scope (non-server): UI/UX, state management, offline-first behavior, payments SDK usage, third-party integrations, build & deploy pipelines for static/web/mobile apps.
+
+## PRIMARY GOALS
+
+* Fast, accessible, responsive apps for India market (low bandwidth friendly).
+* Reusable components across Customer and Provider frontends.
+* Mobile-first experience, Progressive Web App (PWA) for customers.
+* Offline caching for schedules/bookings read-only views.
+* Secure client integrations with payments & push notifications (SDK-only; server tokens assumed).
+
+## TECH STACK (CLIENT ONLY)
+
+Web (Customer / Provider / Admin)
+
+* React 18
+* Vite (or Create React App) for dev tooling
+* TypeScript
+* Redux Toolkit (global state)
+* React Query for server data caching & background sync
+* React Router v6
+* Tailwind CSS for styling (utility-first)
+* Material-UI (MUI) for accessible components (optional theme layer)
+* React Hook Form + Yup for forms & validation
+* Map: Google Maps JavaScript API (client-side)
+* Charts: Recharts for visualizations
+* HTTP client: Axios (for interacting with provided APIs)
+* Payment widgets: Razorpay Checkout (web), UPI deep links
+* Push: Firebase Cloud Messaging (client SDK)
+* Images: direct S3 uploads via signed URLs (client uploads UI + presigned flow)
+* Testing: Jest + React Testing Library
+* E2E: Playwright or Cypress
+* Linting/Formatting: ESLint + Prettier
+* Accessibility tooling: axe-core (dev)
+* Analytics: Google Analytics / Firebase Analytics
+* Error monitoring: Sentry (client SDK)
+* CI/CD: GitHub Actions (build + deploy to S3/Netlify/Vercel)
+* PWA: Workbox for offline caching & service worker
+
+Mobile (React Native / Expo)
+
+* Expo managed workflow (fast dev + OTA updates)
+* React Native 0.72+ / Expo SDK latest
+* Navigation: React Navigation
+* State: Redux Toolkit + Redux Persist
+* Forms: React Hook Form (RN)
+* Maps: react-native-maps (Google)
+* Camera & Uploads: Expo Camera & ImagePicker
+* Payments: Razorpay React Native SDK (or deep-link UPI)
+* Push: Expo Notifications / FCM
+* OTA updates: Expo EAS or CodePush (optional)
+* Build: EAS Build / Play Store & App Store pipeline
+
+## REPO FOLDER (CLIENT-ONLY) — single copy to paste in GitHub
+
+ziva-client/
+├─ customer-web/
+│  ├─ public/
+│  ├─ src/
+│  │  ├─ assets/
+│  │  ├─ components/
+│  │  │  ├─ common/ (Button, Modal, Img, Skeleton)
+│  │  │  ├─ booking/ (BookingModal, AvailabilityGrid)
+│  │  │  ├─ search/ (SearchBar, Filters, Sort)
+│  │  │  └─ profile/ (ProfileCard, EditForm)
+│  │  ├─ pages/ (Home, SearchResults, BarberDetail, MyBookings, Wallet, Profile)
+│  │  ├─ hooks/ (useAuth, useGeo, useDebouncedSearch)
+│  │  ├─ store/ (redux-toolkit slices)
+│  │  ├─ services/ (apiClient.ts, payments.ts, maps.ts, uploads.ts)
+│  │  ├─ styles/ (tailwind.config.ts)
+│  │  └─ App.tsx
+│  ├─ package.json
+│  └─ README.md
+├─ partner-web/ (barber/beauty pro dashboard)
+│  ├─ src/
+│  │  ├─ components/ (ScheduleManager, ServiceManager, EarningsChart)
+│  │  ├─ pages/ (Dashboard, Bookings, Services, Withdrawals, Profile)
+│  │  └─ services/ (payments, notifications)
+│  └─ package.json
+├─ admin-web/ (only UI; sensitive actions are disabled without server)
+│  ├─ src/
+│  │  ├─ components/ (UsersTable, BarberApprovals, Reports)
+│  │  └─ pages/ (Dashboard, Reports, Settings)
+│  └─ package.json
+├─ mobile/
+│  ├─ app/
+│  │  ├─ screens/
+│  │  ├─ components/
+│  │  └─ services/
+│  └─ app.json
+├─ shared-ui/ (component library used by all three)
+│  ├─ src/
+│  │  ├─ Button.tsx
+│  │  ├─ Card.tsx
+│  │  └─ Icons.tsx
+│  └─ package.json
+├─ docs/
+│  ├─ API_CONTRACTS.md   # required request/response shapes (frontend expectations)
+│  ├─ DEPLOY_CLIENT.md
+│  └─ DESIGN_TOKENS.md
+├─ scripts/
+│  ├─ build-and-deploy.sh
+│  └─ generate-presigned-url.example.sh
+├─ .github/
+│  └─ workflows/
+│     ├─ build.yml
+│     └─ deploy.yml
+└─ README.md
+
+## CORE UI FEATURES (NON-SERVER)
+
+* Search & filter barbers/salons by service, location, price, ratings.
+* Barber/Salon detail page with services, gallery, reviews, availability calendar.
+* Booking flow (select service → date/time → location type → pay or pay-on-arrival).
+* Wallet UI: view balance, add money (via Razorpay Checkout pop-up initiated by server token — client implements SDK usage).
+* Reviews & photos upload UI (images uploaded to S3 via presigned URLs).
+* Real-time status UI: bookings status via WebSocket + optimistic UI updates (client-side only).
+* Provider dashboard: accept/reject bookings, mark in-progress/completed, view earnings charts.
+* Admin UI: view metrics, approve providers (buttons disabled if no server).
+* Offline-first basics: cache recent searches, provider cards, and user bookings (read-only) via service worker and Redux Persist.
+
+## DATA CONTRACTS & SHAPES (frontend view)
+
+This file assumes the backend exposes certain JSON shapes. Keep shapes minimal and versioned.
+
+Example: Barber summary (used in search)
+{
+id: string,
+name: string,
+shopName?: string,
+rating: number,
+reviewCount: number,
+services: [{ id, name, price, duration }],
+location: { lat, lng, address, distanceKm },
+images: [url],
+homeServiceAvailable: boolean
+}
+
+Example: Booking request (client sends to server)
+{
+customerId: string,
+barberId: string,
+serviceId: string,
+scheduledAt: ISO8601,
+locationType: "salon" | "home",
+address?: string,
+coordinates?: [lng, lat],
+paymentMethod: "razorpay" | "upi" | "wallet" | "cod",
+notes?: string
+}
+
+## INTEGRATIONS (CLIENT SIGNALS / SDK USAGE)
+
+Payments (client):
+
+* Razorpay Checkout: include checkout options, amount, prefill; obtain orderId from server; use handler to confirm payment result and forward to server.
+* UPI: deep links / intent. (Client constructs UPI link with required params; server must verify.)
+* Wallet top-up: open Razorpay Checkout with server-provided order; on success call server to credit wallet.
+
+Uploads:
+
+* Images and documents via presigned S3 PUT URLs. Client obtains URL from server (only pre-signed), then PUTs directly.
+
+Maps:
+
+* Google Maps JS SDK for web (key restricted by domain). Use client geolocation API for user coordinates; always degrade gracefully if location blocked.
+
+Push Notifications:
+
+* FCM client SDK registers token; sends token to server for subscription management.
+
+Realtime:
+
+* Socket.io client for live booking updates (connect with JWT token from server). On client, implement exponential backoff and reconnection strategies.
+
+## AUTH (CLIENT RESPONSIBILITIES)
+
+* Token storage: access token in memory + refresh token in secure HttpOnly cookie (recommended). If only local storage possible, minimize lifetime and rotate often — but note security tradeoffs.
+* Auto-refresh flow: when 401 occurs, call refresh endpoint to get new access token, retry original request once.
+* Logout: clear client caches, Redux state, and unregister push token.
+
+## OFFLINE & CACHING STRATEGY
+
+* Service worker (Workbox): cache static assets, critical pages (Home, Search template), and API GET responses for short TTL.
+* React Query: cache server data; stale-while-revalidate strategy and background refetch.
+* Redux Persist: persist auth-less state (bookmarks, preferences).
+* Optimistic updates for UI interactions (bookmark toggle, local booking draft).
+
+## PERFORMANCE & ACCESSIBILITY
+
+* Images: lazy-load, responsive srcset, WebP where possible.
+* Code-splitting: route-based chunking, vendor chunking.
+* Lighthouse target: >90 performance (mobile), Ensure 3G-friendly sizes.
+* Accessibility: keyboard nav, aria attributes, color contrast, semantic HTML.
+
+## SECURITY (CLIENT FOCUS)
+
+* Use HTTPS for all endpoints and SDK calls.
+* CSP (Content Security Policy) headers (set by hosting or meta tag).
+* Do not store sensitive secrets in the client (API keys must be restricted to domain and minimal scopes).
+* Validate inputs on client but treat server as the source of truth.
+* Sanitize any HTML or rich text displayed (reviews).
+
+## TESTING STRATEGY
+
+* Unit: Jest + React Testing Library for components and hooks (coverage target >= 80%).
+* Integration: test flows (search → booking) with mocked API using MSW (Mock Service Worker).
+* E2E: Playwright/Cypress for critical user journeys (signup/login, book & pay flow, provider accept).
+* Accessibility: axe tests in CI for key pages.
+
+## CI / CD
+
+* GitHub Actions:
+
+  * PR lint & test workflow (runs ESLint, typecheck, unit tests).
+  * Build workflow: runs production build (Vite/CRA), runs Lighthouse CI (optional).
+  * Deploy workflow: on release or push to main, build and deploy static assets to S3 + CloudFront or Vercel/Netlify; mobile builds to EAS or Play/App Store pipelines.
+* Secrets: store in GitHub Secrets; never leak keys in logs.
+
+## DEPLOYMENT (STATIC / CDN)
+
+* Web: Build static assets → upload to S3 / serve via CloudFront (invalidate on deploy) or deploy to Vercel/Netlify.
+* Mobile: Expo / EAS builds; distribute via Play Store / App Store or internal via Expo dev channels.
+* PWA: manifest + service worker; ensure HTTPS and proper icons.
+
+## OBSERVABILITY (CLIENT)
+
+* Sentry SDK for uncaught errors & performance traces (client side).
+* Analytics: events for search, booking, payments, conversions.
+* Logs: capture breadcrumbs for payment flow failures.
+
+## LOCAL DEV SETUP
+
+1. Clone repo
+2. cd customer-web && cp .env.example .env && npm install
+3. Start dev server: npm run dev
+4. Use MSW (Mock Service Worker) to emulate API responses locally.
+5. For mobile: cd mobile && expo start
+
+## DOCUMENTATION TO INCLUDE IN REPO
+
+* docs/API_CONTRACTS.md — request/response shapes expected by client (versioned).
+* docs/DEPLOY_CLIENT.md — build + deploy steps for each app.
+* docs/DESIGN_TOKENS.md — themes, colors, spacing units.
+* docs/SECURITY.md — client-side security practices & token handling.
+* docs/ACCESSIBILITY.md — checklist & testing notes.
+
+## PRIVACY & COMPLIANCE
+
+* PII in client: avoid persisting sensitive fields (full PAN / bank details). Use placeholders and fetch on-demand.
+* GDPR/India: show privacy policy link in signup, handle data deletion requests via server endpoints (client provides UI).
+
+## ASSUMPTIONS & LIMITATIONS
+
+* Server endpoints exist to create orders, sign presigned URLs, verify payments, refresh tokens, and expose domain-restricted API keys.
+* This spec intentionally omits server code; security-critical operations (payment verification, token issuance, bank transfers) must be implemented server-side.
+* Any keys embedded in client must be domain-restricted and read-only (maps, analytics).
+
+## MVP FEATURES (Client)
+
+1. Customer web PWA: search, view, book, pay via Razorpay, manage bookings, wallet top-up UI.
+2. Partner web: manage services, calendar, accept/reject bookings, view earnings.
+3. Mobile app: core booking + wallet + push notifications.
+4. Shared component library and theme for consistent brand.
+
+## ROADMAP (next steps for frontend team)
+
+* Week 1: Component library + routing + auth flows (mocked)
+* Week 2: Search, barber detail, booking flow (mock API)
+* Week 3: Payments SDK integration (checkout UI), image uploads (presigned flow)
+* Week 4: Provider dashboard + charts + schedule management
+* Week 5: PWA enhancements, offline cache, accessibility fixes, E2E tests
+* Ongoing: telemetry, performance tuning, app store submission
+
+## CONTACTS & OWNERSHIP
+
+* Frontend Lead: @ziva-frontend
+* Mobile Lead: @ziva-mobile
+* Design: @ziva-design
+* QA: @ziva-qa
+
+## COPYRIGHT & LICENSE
+
+* Repo default: MIT (update LICENSE file)
+
+## FINAL NOTE (from the 20-year-old dev team)
+
+We built this spec to be copy-paste ready for a GitHub repo as `ziva technical specifications.txt`. It’s client-first and pragmatic — production ready on the front end, but remember: never do payment verification or sensitive data handling in the client. Ship with server endpoints that follow recommended security flows. If you want, we can also generate a one-page README.md or a Vite + TypeScript starter for the customer web app next.
